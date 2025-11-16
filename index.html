@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LT Timer - Lightning Talk Countdown</title>
+  <link rel="stylesheet" href="./style.min.css">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: var(--color-background);
+      transition: background-color 0.5s ease;
+    }
+
+    .timer-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.5s ease;
+    }
+
+    /* Initial Setup Screen */
+    .setup-screen {
+      text-align: center;
+    }
+
+    .setup-title {
+      font-size: var(--font-size-4xl);
+      margin-bottom: var(--spacing-2xl);
+      color: var(--color-text-primary);
+    }
+
+    .time-options {
+      display: flex;
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-2xl);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .time-option {
+      background: var(--color-surface);
+      border: 3px solid var(--color-border);
+      border-radius: 1rem;
+      padding: var(--spacing-xl) var(--spacing-2xl);
+      font-size: var(--font-size-2xl);
+      font-weight: var(--font-weight-bold);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 120px;
+    }
+
+    .time-option:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .time-option.selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+    }
+
+    /* Countdown Display */
+    .countdown-screen {
+      display: none;
+      text-align: center;
+      width: 100%;
+    }
+
+    .countdown-screen.active {
+      display: block;
+    }
+
+    .time-display {
+      font-size: clamp(8rem, 25vw, 20rem);
+      font-weight: var(--font-weight-bold);
+      font-family: var(--font-family-en);
+      color: var(--color-text-primary);
+      line-height: 1;
+      margin-bottom: var(--spacing-xl);
+      transition: all 0.3s ease;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-bar-container {
+      width: 80%;
+      max-width: 800px;
+      height: 20px;
+      background: var(--color-border);
+      border-radius: 10px;
+      margin: 0 auto var(--spacing-2xl);
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 10px;
+      transition: width 1s linear, background-color 0.5s ease;
+    }
+
+    /* Control Buttons */
+    .controls {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: var(--spacing-lg) var(--spacing-2xl);
+      font-size: var(--font-size-lg);
+      border-radius: 0.5rem;
+      font-weight: var(--font-weight-semibold);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .btn-start {
+      background: var(--color-success);
+      color: white;
+    }
+
+    .btn-start:hover {
+      background: #22943e;
+      transform: translateY(-2px);
+    }
+
+    .btn-pause {
+      background: var(--color-warning);
+      color: #333;
+    }
+
+    .btn-pause:hover {
+      background: #e6ad00;
+      transform: translateY(-2px);
+    }
+
+    .btn-resume {
+      background: var(--color-info);
+      color: white;
+    }
+
+    .btn-resume:hover {
+      background: var(--color-primary-hover);
+      transform: translateY(-2px);
+    }
+
+    .btn-reset {
+      background: var(--color-text-secondary);
+      color: white;
+    }
+
+    .btn-reset:hover {
+      background: #555;
+      transform: translateY(-2px);
+    }
+
+    /* Warning States */
+    .warning-yellow .time-display {
+      color: #f59e0b;
+    }
+
+    .warning-yellow .progress-bar {
+      background: #f59e0b;
+    }
+
+    .warning-orange .time-display {
+      color: #ea580c;
+    }
+
+    .warning-orange .progress-bar {
+      background: #ea580c;
+    }
+
+    .warning-red .time-display {
+      color: var(--color-error);
+      animation: pulse 1s infinite;
+    }
+
+    .warning-red .progress-bar {
+      background: var(--color-error);
+    }
+
+    .warning-critical {
+      background: rgba(218, 50, 65, 0.1) !important;
+    }
+
+    .warning-critical .time-display {
+      color: var(--color-error);
+      animation: pulse 0.5s infinite, shake 0.5s infinite;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .countdown-screen.active {
+      animation: fadeIn 0.5s ease;
+    }
+
+    /* Confetti */
+    .confetti-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1000;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 20px;
+      opacity: 0;
+      animation: confetti-fall 4s ease-out forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        opacity: 1;
+        transform: translateY(-100vh) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(100vh) rotate(720deg);
+      }
+    }
+
+    /* Time's Up Message */
+    .times-up {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(4rem, 15vw, 12rem);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-error);
+      text-shadow: 0 0 50px rgba(218, 50, 65, 0.5);
+      animation: timesUpPulse 1s ease-in-out infinite;
+      z-index: 100;
+    }
+
+    .times-up.active {
+      display: block;
+    }
+
+    @keyframes timesUpPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .time-options {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .time-option {
+        width: 80%;
+      }
+
+      .controls {
+        flex-direction: column;
+        width: 80%;
+        margin: 0 auto;
+      }
+
+      .control-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="timer-container" id="timerContainer">
+    <!-- Setup Screen -->
+    <div class="setup-screen" id="setupScreen">
+      <h1 class="setup-title">Lightning Talk Timer</h1>
+      <div class="time-options">
+        <button class="time-option" data-time="60">1分</button>
+        <button class="time-option" data-time="180">3分</button>
+        <button class="time-option" data-time="300">5分</button>
+        <button class="time-option" data-time="600">10分</button>
+      </div>
+      <div class="controls">
+        <button class="control-btn btn-start" id="startBtn" disabled>スタート</button>
+      </div>
+    </div>
+
+    <!-- Countdown Screen -->
+    <div class="countdown-screen" id="countdownScreen">
+      <div class="time-display" id="timeDisplay">00:00</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="controls">
+        <button class="control-btn btn-pause" id="pauseBtn">一時停止</button>
+        <button class="control-btn btn-resume" id="resumeBtn" style="display: none;">再開</button>
+        <button class="control-btn btn-reset" id="resetBtn">リセット</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Time's Up Message -->
+  <div class="times-up" id="timesUp">TIME'S UP!</div>
+
+  <!-- Confetti Container -->
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <script>
+    // Timer State
+    let totalSeconds = 0;
+    let remainingSeconds = 0;
+    let timerInterval = null;
+    let isPaused = false;
+
+    // DOM Elements
+    const setupScreen = document.getElementById('setupScreen');
+    const countdownScreen = document.getElementById('countdownScreen');
+    const timerContainer = document.getElementById('timerContainer');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const progressBar = document.getElementById('progressBar');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const timesUp = document.getElementById('timesUp');
+    const confettiContainer = document.getElementById('confettiContainer');
+
+    // Time Selection
+    const timeOptions = document.querySelectorAll('.time-option');
+    timeOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        timeOptions.forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+        totalSeconds = parseInt(option.dataset.time);
+        startBtn.disabled = false;
+      });
+    });
+
+    // Format Time
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Update Display
+    function updateDisplay() {
+      timeDisplay.textContent = formatTime(remainingSeconds);
+
+      const progressPercent = (remainingSeconds / totalSeconds) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      // Update warning states
+      timerContainer.className = 'timer-container';
+
+      const percentRemaining = (remainingSeconds / totalSeconds) * 100;
+
+      if (percentRemaining <= 10 || remainingSeconds <= 10) {
+        timerContainer.classList.add('warning-critical');
+      } else if (percentRemaining <= 20 || remainingSeconds <= 30) {
+        timerContainer.classList.add('warning-red');
+      } else if (percentRemaining <= 40 || remainingSeconds <= 60) {
+        timerContainer.classList.add('warning-orange');
+      } else if (percentRemaining <= 60) {
+        timerContainer.classList.add('warning-yellow');
+      }
+    }
+
+    // Start Timer
+    function startTimer() {
+      setupScreen.style.display = 'none';
+      countdownScreen.classList.add('active');
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+
+      timerInterval = setInterval(() => {
+        if (!isPaused) {
+          remainingSeconds--;
+          updateDisplay();
+
+          if (remainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerComplete();
+          }
+        }
+      }, 1000);
+    }
+
+    // Timer Complete
+    function timerComplete() {
+      timesUp.classList.add('active');
+      createConfetti();
+
+      // Hide timer display
+      timeDisplay.style.visibility = 'hidden';
+
+      // Play completion sound (if available)
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 880;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 1);
+      } catch (e) {
+        console.log('Audio not supported');
+      }
+    }
+
+    // Create Confetti
+    function createConfetti() {
+      const colors = ['#43c6fa', '#da3241', '#28a745', '#ffc107', '#5dd3ff', '#ff4757', '#34d058', '#ffd93d'];
+
+      for (let i = 0; i < 150; i++) {
+        setTimeout(() => {
+          const confetti = document.createElement('div');
+          confetti.className = 'confetti';
+          confetti.style.left = Math.random() * 100 + 'vw';
+          confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          confetti.style.animationDuration = (Math.random() * 2 + 3) + 's';
+          confetti.style.animationDelay = Math.random() * 0.5 + 's';
+          confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+          // Random shapes
+          const shapes = ['rectangle', 'square', 'circle'];
+          const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+          if (shape === 'square') {
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+          } else if (shape === 'circle') {
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.borderRadius = '50%';
+          }
+
+          confettiContainer.appendChild(confetti);
+
+          // Remove after animation
+          setTimeout(() => confetti.remove(), 5000);
+        }, i * 20);
+      }
+    }
+
+    // Pause Timer
+    function pauseTimer() {
+      isPaused = true;
+      pauseBtn.style.display = 'none';
+      resumeBtn.style.display = 'inline-block';
+    }
+
+    // Resume Timer
+    function resumeTimer() {
+      isPaused = false;
+      resumeBtn.style.display = 'none';
+      pauseBtn.style.display = 'inline-block';
+    }
+
+    // Reset Timer
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isPaused = false;
+
+      setupScreen.style.display = 'block';
+      countdownScreen.classList.remove('active');
+      timerContainer.className = 'timer-container';
+      timesUp.classList.remove('active');
+      timeDisplay.style.visibility = 'visible';
+
+      pauseBtn.style.display = 'inline-block';
+      resumeBtn.style.display = 'none';
+
+      // Clear confetti
+      confettiContainer.innerHTML = '';
+
+      // Reset selection
+      timeOptions.forEach(opt => opt.classList.remove('selected'));
+      startBtn.disabled = true;
+      totalSeconds = 0;
+    }
+
+    // Event Listeners
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resumeBtn.addEventListener('click', resumeTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && countdownScreen.classList.contains('active')) {
+        e.preventDefault();
+        if (isPaused) {
+          resumeTimer();
+        } else {
+          pauseTimer();
+        }
+      }
+      if (e.code === 'Escape') {
+        resetTimer();
+      }
+    });
+  </script>
+</body>
+</html>
