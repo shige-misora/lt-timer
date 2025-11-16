@@ -1,6 +1,6 @@
 # LT Timer - Lightning Talk Countdown
 
-LT（ライトニングトーク）用のカウントダウンタイマーです。
+LT（ライトニングトーク）用のカウントダウンタイマーです。 
 
 ## 機能
 
