@@ -21,8 +21,9 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
+      padding-top: 10vh;
       transition: background-color 0.5s ease;
     }
 
@@ -66,6 +67,59 @@
     .time-option.selected {
       border-color: var(--color-primary);
       background: var(--color-primary);
+      color: var(--color-text-inverse);
+    }
+
+    /* Custom Time Input */
+    .custom-time-container {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .custom-time-input {
+      width: 70px;
+      padding: var(--spacing-md);
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-bold);
+      text-align: center;
+      border: 2px solid var(--color-border);
+      border-radius: 0.75rem;
+      background: var(--color-surface);
+      color: var(--color-text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .custom-time-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .custom-time-input::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    .custom-time-label {
+      font-size: var(--font-size-lg);
+      color: var(--color-text-secondary);
+    }
+
+    .time-option.custom-option {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) var(--spacing-lg);
+      min-width: auto;
+    }
+
+    .time-option.custom-option.selected .custom-time-input {
+      border-color: var(--color-primary);
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--color-text-inverse);
+    }
+
+    .time-option.custom-option.selected .custom-time-label {
       color: var(--color-text-inverse);
     }
 
@@ -128,7 +182,7 @@
 
     .btn-start {
       background: var(--color-success);
-      color: white;
+      color: #333333;
     }
 
     .btn-start:hover {
@@ -311,6 +365,12 @@
         <button class="time-option" data-time="300">5分</button>
         <button class="time-option" data-time="600">10分</button>
       </div>
+      <div class="time-options" style="margin-top: var(--spacing-md);">
+        <div class="time-option custom-option" id="customOption">
+          <input type="number" class="custom-time-input" id="customTimeInput" min="1" max="60" placeholder="7">
+          <span class="custom-time-label">分</span>
+        </div>
+      </div>
       <div class="controls">
         <button class="control-btn btn-start" id="startBtn" disabled>スタート</button>
       </div>
@@ -357,15 +417,45 @@
     const confettiContainer = document.getElementById('confettiContainer');
 
     // Time Selection
-    const timeOptions = document.querySelectorAll('.time-option');
+    const timeOptions = document.querySelectorAll('.time-option:not(.custom-option)');
+    const customOption = document.getElementById('customOption');
+    const customTimeInput = document.getElementById('customTimeInput');
+
+    // Preset time buttons
     timeOptions.forEach(option => {
       option.addEventListener('click', () => {
         timeOptions.forEach(opt => opt.classList.remove('selected'));
+        customOption.classList.remove('selected');
         option.classList.add('selected');
         totalSeconds = parseInt(option.dataset.time);
         startBtn.disabled = false;
       });
     });
+
+    // Custom time input
+    customOption.addEventListener('click', () => {
+      timeOptions.forEach(opt => opt.classList.remove('selected'));
+      customOption.classList.add('selected');
+      customTimeInput.focus();
+      updateCustomTime();
+    });
+
+    customTimeInput.addEventListener('input', updateCustomTime);
+    customTimeInput.addEventListener('focus', () => {
+      timeOptions.forEach(opt => opt.classList.remove('selected'));
+      customOption.classList.add('selected');
+      updateCustomTime();
+    });
+
+    function updateCustomTime() {
+      const minutes = parseInt(customTimeInput.value);
+      if (minutes && minutes > 0 && minutes <= 60) {
+        totalSeconds = minutes * 60;
+        startBtn.disabled = false;
+      } else if (customOption.classList.contains('selected')) {
+        startBtn.disabled = true;
+      }
+    }
 
     // Format Time
     function formatTime(seconds) {
@@ -514,6 +604,8 @@
 
       // Reset selection
       timeOptions.forEach(opt => opt.classList.remove('selected'));
+      customOption.classList.remove('selected');
+      customTimeInput.value = '';
       startBtn.disabled = true;
       totalSeconds = 0;
     }
